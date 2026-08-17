@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape the Story Tower!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#211b45;
+    --night-2:#342a6b;
+    --parchment:#fbf3de;
+    --parchment-2:#f4e9c9;
+    --ink:#2c2350;
+    --ink-soft:#5b5285;
+    --vault:#2e7d5b;
+    --vault-dark:#1f5a41;
+    --library:#2c6e9b;
+    --library-dark:#1e4f70;
+    --forge:#b5541b;
+    --forge-dark:#8a3f13;
+    --chest:#8e3b6b;
+    --chest-dark:#672a4c;
+    --gold:#f0a93a;
+    --gold-light:#ffd98a;
+    --good:#2e7d5b;
+    --bad:#c0392b;
+    --radius:18px;
+    --shadow: 0 10px 24px rgba(33,27,69,0.18);
+  }
+
+  *{box-sizing:border-box;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  body{
+    margin:0;
+    font-family:'Lexend', system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.06), transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(255,255,255,0.05), transparent 45%),
+      linear-gradient(180deg, var(--night) 0%, var(--night-2) 100%);
+    color:var(--ink);
+    min-height:100vh;
+    padding:20px 14px 60px;
+  }
+
+  .app{
+    max-width:760px;
+    margin:0 auto;
+  }
+
+  /* ---------- Header / progress trail ---------- */
+  .header{
+    text-align:center;
+    color:var(--parchment);
+    margin-bottom:22px;
+  }
+  .header h1{
+    font-family:'Fredoka', sans-serif;
+    font-size:clamp(1.5rem, 5vw, 2.2rem);
+    margin:6px 0 4px;
+    letter-spacing:0.5px;
+  }
+  .header p{
+    margin:0;
+    opacity:0.85;
+    font-size:0.95rem;
+  }
+
+  .trail{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:6px;
+    margin:22px auto 8px;
+    max-width:640px;
+    flex-wrap:wrap;
+  }
+  .trail-stop{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    width:78px;
+  }
+  .trail-badge{
+    width:46px;height:46px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.3rem;
+    background:rgba(255,255,255,0.08);
+    border:2px solid rgba(255,255,255,0.25);
+    color:var(--parchment);
+    transition: all 0.35s ease;
+  }
+  .trail-stop.done .trail-badge{
+    background:var(--gold);
+    border-color:var(--gold-light);
+    color:var(--ink);
+    box-shadow:0 0 0 6px rgba(240,169,58,0.18);
+  }
+  .trail-stop.active .trail-badge{
+    border-color:var(--gold-light);
+    box-shadow:0 0 0 6px rgba(240,169,58,0.12);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.08); }
+  }
+  .trail-label{
+    font-size:0.68rem;
+    color:var(--parchment);
+    opacity:0.8;
+    text-align:center;
+    line-height:1.1;
+  }
+  .trail-line{
+    flex:1;
+    height:3px;
+    background:rgba(255,255,255,0.18);
+    min-width:14px;
+    margin-top:-24px;
+  }
+  .trail-line.done{ background:var(--gold); }
+
+  /* ---------- Cards / screens ---------- */
+  .card{
+    background:var(--parchment);
+    border-radius:24px;
+    box-shadow:var(--shadow);
+    padding:clamp(20px, 4vw, 36px);
+    position:relative;
+    overflow:hidden;
+    border:1px solid rgba(44,35,80,0.06);
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:0 0 auto 0; height:8px;
+    background:linear-gradient(90deg, var(--room-color, var(--gold)), var(--gold-light));
+  }
+  .screen{ display:none; }
+  .screen.active{ display:block; animation:fadeIn 0.4s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .room-eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:'Fredoka', sans-serif;
+    font-weight:600;
+    font-size:0.85rem;
+    color:var(--room-color, var(--ink));
+    background:color-mix(in srgb, var(--room-color, var(--gold)) 14%, white);
+    padding:6px 14px;
+    border-radius:999px;
+    margin-bottom:14px;
+  }
+
+  h2.room-title{
+    font-family:'Fredoka', sans-serif;
+    font-size:clamp(1.4rem, 4vw, 1.9rem);
+    margin:0 0 10px;
+    color:var(--ink);
+  }
+  .room-intro{
+    font-size:1.02rem;
+    line-height:1.55;
+    color:var(--ink-soft);
+    margin-bottom:20px;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    font-family:'Fredoka', sans-serif;
+    font-weight:600;
+    font-size:1rem;
+    padding:13px 26px;
+    border-radius:14px;
+    border:none;
+    cursor:pointer;
+    background:var(--gold);
+    color:var(--ink);
+    box-shadow:0 4px 0 #c98a1e;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn:active{ transform:translateY(2px); box-shadow:0 1px 0 #c98a1e; }
+  .btn:disabled{
+    opacity:0.45; cursor:not-allowed; box-shadow:0 4px 0 rgba(0,0,0,0.15); transform:none;
+  }
+  .btn.ghost{
+    background:transparent;
+    color:var(--ink);
+    box-shadow:none;
+    border:2px solid rgba(44,35,80,0.2);
+  }
+  .btn:focus-visible, .choice:focus-visible, .trail-badge:focus-visible{
+    outline:3px solid var(--library);
+    outline-offset:3px;
+  }
+  .btn-row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:22px; }
+
+  /* ---------- Question blocks ---------- */
+  .question{
+    margin-bottom:26px;
+    padding-bottom:22px;
+    border-bottom:1px dashed rgba(44,35,80,0.15);
+  }
+  .question:last-of-type{ border-bottom:none; }
+  .question-prompt{
+    font-weight:600;
+    font-size:1.02rem;
+    margin-bottom:12px;
+    line-height:1.5;
+  }
+  .question-context{
+    font-style:italic;
+    color:var(--ink-soft);
+    background:var(--parchment-2);
+    padding:12px 14px;
+    border-radius:12px;
+    margin-bottom:12px;
+    line-height:1.5;
+  }
+  .choices{
+    display:grid;
+    gap:10px;
+  }
+  .choice{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    text-align:left;
+    font-family:'Lexend', sans-serif;
+    font-size:0.98rem;
+    padding:13px 16px;
+    border-radius:12px;
+    border:2px solid rgba(44,35,80,0.15);
+    background:white;
+    cursor:pointer;
+    color:var(--ink);
+    transition: all 0.15s ease;
+  }
+  .choice:hover{ border-color: var(--room-color, var(--library)); }
+  .choice .icon{
+    width:22px; height:22px; flex:0 0 22px;
+    border-radius:50%;
+    border:2px solid rgba(44,35,80,0.25);
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.75rem;
+  }
+  .choice.selected{
+    border-color: var(--room-color, var(--library));
+    background: color-mix(in srgb, var(--room-color, var(--library)) 10%, white);
+  }
+  .choice.correct{
+    border-color:var(--good);
+    background: color-mix(in srgb, var(--good) 14%, white);
+  }
+  .choice.correct .icon{ background:var(--good); border-color:var(--good); color:white; }
+  .choice.incorrect{
+    border-color:var(--bad);
+    background: color-mix(in srgb, var(--bad) 10%, white);
+  }
+  .choice.incorrect .icon{ background:var(--bad); border-color:var(--bad); color:white; }
+  .choice[disabled]{ cursor:default; }
+
+  .question-feedback{
+    font-size:0.9rem;
+    margin-top:8px;
+    font-weight:600;
+    min-height:1.2em;
+  }
+  .question-feedback.good{ color:var(--good); }
+  .question-feedback.bad{ color:var(--bad); }
+
+  /* ---------- Reading passage ---------- */
+  .passage{
+    background:white;
+    border-radius:14px;
+    padding:20px;
+    line-height:1.8;
+    font-size:1.05rem;
+    margin-bottom:20px;
+    border:1px solid rgba(44,35,80,0.1);
+  }
+  .passage h3{
+    font-family:'Fredoka', sans-serif;
+    margin-top:0;
+  }
+  .read-aloud-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'Lexend', sans-serif;
+    font-size:0.85rem;
+    background:none;
+    border:2px solid var(--room-color, var(--library));
+    color:var(--room-color, var(--library));
+    padding:8px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    margin-bottom:14px;
+  }
+
+  /* ---------- Summary banner ---------- */
+  .status-banner{
+    margin-top:18px;
+    padding:14px 16px;
+    border-radius:12px;
+    font-weight:600;
+    display:none;
+  }
+  .status-banner.show{ display:block; }
+  .status-banner.good{ background:color-mix(in srgb, var(--good) 15%, white); color:var(--vault-dark); }
+  .status-banner.bad{ background:color-mix(in srgb, var(--bad) 12%, white); color:var(--bad); }
+
+  /* Teacher panel */
+  .teacher-toggle{
+    margin-top:26px;
+    font-size:0.85rem;
+    color:var(--ink-soft);
+    background:none;
+    border:1px solid rgba(44,35,80,0.2);
+    padding:8px 14px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .teacher-panel{
+    display:none;
+    margin-top:12px;
+    background:var(--parchment-2);
+    border-radius:12px;
+    padding:16px 18px;
+    font-size:0.85rem;
+    line-height:1.6;
+    color:var(--ink-soft);
+  }
+  .teacher-panel.show{ display:block; }
+  .teacher-panel ul{ margin:6px 0 0; padding-left:18px; }
+
+  /* Start screen */
+  .start-illustration{
+    font-size:3.4rem;
+    text-align:center;
+    margin-bottom:6px;
+  }
+  .start-card p{ line-height:1.6; font-size:1.02rem; color:var(--ink-soft); }
+  .name-field{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:2px solid rgba(44,35,80,0.2);
+    font-family:'Lexend', sans-serif;
+    font-size:1rem;
+    margin-top:6px;
+  }
+  .field-label{ font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px; }
+
+  /* Keychain */
+  .keychain{
+    display:flex; gap:10px; justify-content:center; margin:18px 0;
+  }
+  .key{
+    width:44px; height:44px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.3rem;
+    background:rgba(255,255,255,0.35);
+    border:2px dashed rgba(255,255,255,0.5);
+  }
+  .key.earned{
+    background:var(--gold);
+    border-style:solid;
+    border-color:var(--gold-light);
+  }
+
+  /* Quiz score ring */
+  .score-wrap{ text-align:center; margin:10px 0 20px; }
+  .score-num{
+    font-family:'Fredoka', sans-serif;
+    font-size:3rem;
+    color:var(--chest);
+  }
+
+  /* Confetti */
+  .confetti-piece{
+    position:fixed;
+    top:-20px;
+    width:10px; height:16px;
+    opacity:0.9;
+    border-radius:2px;
+    animation:fall linear forwards;
+    z-index:50;
+  }
+  @keyframes fall{
+    to{ transform:translateY(105vh) rotate(360deg); opacity:0.6; }
+  }
+
+  .certificate{
+    border:3px solid var(--gold);
+    border-radius:16px;
+    padding:26px;
+    text-align:center;
+    background: linear-gradient(180deg, #fffdf6, var(--parchment-2));
+    margin:20px 0;
+  }
+  .certificate h3{ font-family:'Fredoka', sans-serif; font-size:1.5rem; margin:6px 0; color:var(--chest); }
+  .certificate .cert-name{
+    font-family:'Fredoka', sans-serif;
+    font-size:1.6rem;
+    margin:10px 0;
+    color:var(--ink);
+    border-bottom:2px solid var(--gold);
+    display:inline-block;
+    padding:0 10px 4px;
+  }
+
+  footer{
+    text-align:center;
+    color:rgba(251,243,222,0.6);
+    font-size:0.78rem;
+    margin-top:30px;
+  }
+
+  @media print{
+    body *{ visibility:hidden; }
+    .certificate, .certificate *{ visibility:visible; }
+    .certificate{ position:absolute; top:0; left:0; width:100%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <h1>🏰 Escape the Story Tower</h1>
+    <p>A reading &amp; language adventure for Grade 2</p>
+  </div>
+
+  <div class="trail" id="trail" aria-hidden="true"></div>
+
+  <div class="card" id="mainCard">
+
+    <!-- START -->
+    <section class="screen active start-card" id="screen-start" style="--room-color:var(--gold)">
+      <div class="start-illustration">📖✨</div>
+      <h2 class="room-title" style="text-align:center">The Dragon of Story Tower</h2>
+      <p>Long ago, a friendly (but very forgetful) dragon locked the Great Book of Tales at the top of Story Tower with three magic locks. To open each lock, you'll need to solve a room full of word puzzles. Finish all three rooms, then face the Final Quiz Chamber to escape with the book!</p>
+      <label class="field-label" for="playerName">What's your name, brave reader?</label>
+      <input class="name-field" id="playerName" type="text" placeholder="Type your name here" maxlength="30">
+      <div class="btn-row">
+        <button class="btn" id="startBtn">Begin the Adventure →</button>
+      </div>
+    </section>
+
+    <!-- ROOM 1: VOCABULARY -->
+    <section class="screen" id="screen-vocab" style="--room-color:var(--vault)">
+      <span class="room-eyebrow">🔑 Room 1 of 3</span>
+      <h2 class="room-title">The Vocabulary Vault</h2>
+      <p class="room-intro">Each treasure chest is guarded by a tricky word. Read the clue sentence carefully, then choose what the bold word means. Get all five correct to unlock the vault!</p>
+      <div id="vocabQuestions"></div>
+      <div class="status-banner" id="vocabStatus"></div>
+      <div class="btn-row">
+        <button class="btn" id="vocabCheckBtn">Check My Answers</button>
+        <button class="btn ghost" id="vocabNextBtn" disabled>Unlock &amp; Continue →</button>
+      </div>
+    </section>
+
+    <!-- ROOM 2: READING -->
+    <section class="screen" id="screen-reading" style="--room-color:var(--library)">
+      <span class="room-eyebrow">🔑 Room 2 of 3</span>
+      <h2 class="room-title">The Whispering Library</h2>
+      <p class="room-intro">Read the story below. You can read it yourself, or press the button to have it read aloud. Then answer the questions to prove you understood it.</p>
+      <div class="passage">
+        <button class="read-aloud-btn" id="readAloudBtn">🔊 Read the story aloud</button>
+        <h3>Ruby the Raccoon</h3>
+        <p>Ruby was a curious raccoon who lived near a quiet pond. Every night, she tiptoed out of her cozy den to explore the forest. One evening, Ruby found a shiny silver spoon by the water. She washed it carefully in the pond, just like raccoons like to do.</p>
+        <p>Suddenly, she heard a soft splash. It was Ruby's best friend, Oliver the Otter! Oliver was looking for his lost spoon. "Is this yours?" asked Ruby, holding up the shiny spoon. Oliver's eyes lit up with joy. "Yes! Thank you, Ruby!" he said. The two friends laughed and played by the pond until the moon rose high in the sky.</p>
+      </div>
+      <div id="readingQuestions"></div>
+      <div class="status-banner" id="readingStatus"></div>
+      <div class="btn-row">
+        <button class="btn" id="readingCheckBtn">Check My Answers</button>
+        <button class="btn ghost" id="readingNextBtn" disabled>Unlock &amp; Continue →</button>
+      </div>
+    </section>
+
+    <!-- ROOM 3: GRAMMAR -->
+    <section class="screen" id="screen-grammar" style="--room-color:var(--forge)">
+      <span class="room-eyebrow">🔑 Room 3 of 3</span>
+      <h2 class="room-title">The Grammar Forge</h2>
+      <p class="room-intro">The forge fixes broken sentences. Choose the correct verb or the correctly written sentence to hammer each one into shape.</p>
+      <div id="grammarQuestions"></div>
+      <div class="status-banner" id="grammarStatus"></div>
+      <div class="btn-row">
+        <button class="btn" id="grammarCheckBtn">Check My Answers</button>
+        <button class="btn ghost" id="grammarNextBtn" disabled>Unlock &amp; Continue →</button>
+      </div>
+    </section>
+
+    <!-- FINAL QUIZ -->
+    <section class="screen" id="screen-quiz" style="--room-color:var(--chest)">
+      <span class="room-eyebrow">🏆 Final Challenge</span>
+      <h2 class="room-title">The Treasure Chamber</h2>
+      <p class="room-intro">You've earned all three keys! Answer these final questions to open the Great Book of Tales. You'll need at least 6 out of 8 correct to escape.</p>
+      <div class="keychain" id="keychainDisplay"></div>
+      <div id="quizQuestions"></div>
+      <div class="btn-row">
+        <button class="btn" id="quizSubmitBtn">Submit &amp; Open the Chest</button>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="screen" id="screen-results" style="--room-color:var(--chest)">
+      <div id="resultsContent"></div>
+    </section>
+
+  </div>
+
+  <button class="teacher-toggle" id="teacherToggle">👩‍🏫 For Teachers: Standards Alignment</button>
+  <div class="teacher-panel" id="teacherPanel">
+    <strong>Common Core alignment (Grade 2 ELA):</strong>
+    <ul>
+      <li><strong>RL.2.1</strong> — Ask and answer who/what/where/when/why/how questions to demonstrate understanding of key details in a text (Reading Room comprehension questions).</li>
+      <li><strong>RL.2.5</strong> — Describe the overall structure of a story, including how the beginning introduces the story and the ending concludes the action (Reading Room sequencing question).</li>
+      <li><strong>RF.2.4</strong> — Read with sufficient accuracy and fluency to support comprehension (optional read-aloud support in the Reading Room).</li>
+      <li><strong>L.2.4</strong> — Determine the meaning of unknown words using context clues (Vocabulary Vault).</li>
+      <li><strong>L.2.1</strong> — Demonstrate command of standard English grammar, including forming and using frequently occurring irregular verbs (Grammar Forge, Part A).</li>
+      <li><strong>L.2.2</strong> — Demonstrate command of capitalization, punctuation, and spelling (Grammar Forge, Part B).</li>
+    </ul>
+    <p>Design notes: activities use large touch targets, single-click selection (no drag-and-drop) for accessibility, immediate non-punitive feedback with unlimited retries, color paired with icons/text (not color alone), and a progress trail so students always know how much remains.</p>
+  </div>
+
+  <footer>Made for classroom &amp; home use · No data is collected or saved</footer>
+</div>
+
+<script>
+(function(){
+  const state = {
+    playerName: "",
+    rooms: { vocab:false, reading:false, grammar:false },
+    quizScore: 0,
+    quizTotal: 0
+  };
+
+  // ---------- DATA ----------
+  const vocabData = [
+    { context: "The enormous elephant was so big it could barely fit through the barn door.",
+      prompt: "What does enormous mean?",
+      choices: ["Very big", "Very small", "Very loud"], correct: 0 },
+    { context: "The rabbit began to nibble on the lettuce leaf, taking tiny little bites.",
+      prompt: "What does nibble mean?",
+      choices: ["To run fast", "To eat in small bites", "To go to sleep"], correct: 1 },
+    { context: "After a big lunch, the drowsy puppy could barely keep its eyes open.",
+      prompt: "What does drowsy mean?",
+      choices: ["Sleepy", "Angry", "Hungry"], correct: 0 },
+    { context: "Sam let out a chuckle when he saw the silly cartoon.",
+      prompt: "What does chuckle mean?",
+      choices: ["A loud cry", "A big jump", "A small laugh"], correct: 2 },
+    { context: "The squirrels began to gather acorns before winter came.",
+      prompt: "What does gather mean?",
+      choices: ["To collect", "To throw", "To hide forever"], correct: 0 }
+  ];
+
+  const readingData = [
+    { prompt: "Who is this story mostly about?", choices: ["Ruby and Oliver", "A bear and a fox", "A dog and a cat"], correct: 0 },
+    { prompt: "Where does the story take place?", choices: ["At school", "Near a pond in the forest", "In a city"], correct: 1 },
+    { prompt: "What did Ruby find by the water?", choices: ["A golden coin", "A red ball", "A shiny silver spoon"], correct: 2 },
+    { prompt: "Why was Oliver happy at the end of the story?", choices: ["He caught a fish", "Ruby found his lost spoon", "He found a new home"], correct: 1 },
+    { prompt: "What happened at the very end of the story?", choices: ["They got lost in the woods", "They played together until the moon rose", "They went to sleep right away"], correct: 1 }
+  ];
+
+  const grammarData = [
+    { prompt: "Yesterday, I ___ to the park.", choices: ["goed", "went", "going"], correct: 1 },
+    { prompt: "She ___ very fast in the race.", choices: ["runned", "run", "ran"], correct: 2 },
+    { prompt: "We ___ pizza for dinner last night.", choices: ["eated", "ate", "eaten"], correct: 1 },
+    { prompt: "He ___ a rainbow after the storm.", choices: ["seed", "seen", "saw"], correct: 2 },
+    { prompt: "Which sentence is written correctly?", choices: ["my dog likes to play in the park", "My dog likes to play in the park.", "My dog Likes to play in the Park"], correct: 1 },
+    { prompt: "Which sentence is written correctly?", choices: ["did you see sam today", "Did you see sam today?", "Did you see Sam today?"], correct: 2 }
+  ];
+
+  const quizData = [
+    { prompt: "What does the word enormous mean?", choices: ["Very big", "Very quiet", "Very cold"], correct: 0 },
+    { prompt: "What does drowsy mean?", choices: ["Angry", "Sleepy", "Fast"], correct: 1 },
+    { prompt: "In the story, who found the lost spoon?", choices: ["Oliver", "Ruby", "A fox"], correct: 1 },
+    { prompt: "Where did Ruby and Oliver's story happen?", choices: ["In the desert", "Near a pond in the forest", "On a boat"], correct: 1 },
+    { prompt: "Choose the correct past-tense verb: Yesterday, we ___ a movie.", choices: ["watch", "watched", "watching"], correct: 1 },
+    { prompt: "Choose the correctly written sentence.", choices: ["where is my backpack", "Where is my backpack?", "where Is my Backpack"], correct: 1 },
+    { prompt: "What does gather mean?", choices: ["To collect", "To break", "To sleep"], correct: 0 },
+    { prompt: "He ___ his homework before dinner.", choices: ["finish", "finished", "finishing"], correct: 1 }
+  ];
+
+  // ---------- TRAIL ----------
+  const trailSteps = [
+    { key:"start", icon:"🐉", label:"Start" },
+    { key:"vocab", icon:"🔒", label:"Vocab Vault" },
+    { key:"reading", icon:"🔒", label:"Library" },
+    { key:"grammar", icon:"🔒", label:"Forge" },
+    { key:"quiz", icon:"🔒", label:"Chest" }
+  ];
+  const trailEl = document.getElementById('trail');
+  function renderTrail(activeKey){
+    trailEl.innerHTML = "";
+    trailSteps.forEach((step, i) => {
+      if(i>0){
+        const line = document.createElement('div');
+        line.className = 'trail-line' + (isDone(trailSteps[i-1].key) ? ' done' : '');
+        trailEl.appendChild(line);
+      }
+      const stop = document.createElement('div');
+      stop.className = 'trail-stop';
+      if(isDone(step.key)) stop.classList.add('done');
+      if(step.key === activeKey) stop.classList.add('active');
+      const badge = document.createElement('div');
+      badge.className = 'trail-badge';
+      badge.textContent = isDone(step.key) ? '🔓' : step.icon;
+      const label = document.createElement('div');
+      label.className = 'trail-label';
+      label.textContent = step.label;
+      stop.appendChild(badge);
+      stop.appendChild(label);
+      trailEl.appendChild(stop);
+    });
+  }
+  function isDone(key){
+    if(key==="start") return true;
+    if(key==="quiz") return document.getElementById('screen-results').classList.contains('active');
+    return !!state.rooms[key];
+  }
+
+  // ---------- SCREEN SWITCHING ----------
+  function showScreen(id, trailKey){
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    renderTrail(trailKey);
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  // ---------- GENERIC ROOM BUILDER ----------
+  function buildQuestions(container, data, onAllCorrect){
+    container.innerHTML = "";
+    const answered = new Array(data.length).fill(null);
+
+    data.forEach((q, qi) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'question';
+
+      if(q.context){
+        const ctx = document.createElement('div');
+        ctx.className = 'question-context';
+        ctx.textContent = q.context;
+        wrap.appendChild(ctx);
+      }
+
+      const p = document.createElement('div');
+      p.className = 'question-prompt';
+      p.textContent = (qi+1) + ". " + q.prompt;
+      wrap.appendChild(p);
+
+      const choicesWrap = document.createElement('div');
+      choicesWrap.className = 'choices';
+
+      const feedback = document.createElement('div');
+      feedback.className = 'question-feedback';
+
+      q.choices.forEach((choiceText, ci) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'choice';
+        btn.innerHTML = '<span class="icon"></span><span>' + choiceText + '</span>';
+        btn.addEventListener('click', () => {
+          if(btn.classList.contains('locked-correct')) return;
+          Array.from(choicesWrap.children).forEach(c => {
+            c.classList.remove('selected','correct','incorrect');
+            c.querySelector('.icon').textContent = '';
+          });
+          if(ci === q.correct){
+            btn.classList.add('correct');
+            btn.querySelector('.icon').textContent = '✓';
+            feedback.textContent = "Great job — that's it!";
+            feedback.className = 'question-feedback good';
+            answered[qi] = true;
+            Array.from(choicesWrap.children).forEach(c => c.classList.add('locked-correct'));
+          } else {
+            btn.classList.add('incorrect');
+            btn.querySelector('.icon').textContent = '✗';
+            feedback.textContent = "Not quite — try another choice!";
+            feedback.className = 'question-feedback bad';
+            answered[qi] = false;
+          }
+          checkAllAnswered();
+        });
+        choicesWrap.appendChild(btn);
+      });
+
+      wrap.appendChild(choicesWrap);
+      wrap.appendChild(feedback);
+      container.appendChild(wrap);
+    });
+
+    function checkAllAnswered(){
+      const allCorrect = answered.every(a => a === true);
+      onAllCorrect(allCorrect);
+    }
+  }
+
+  // ---------- ROOM 1: VOCAB ----------
+  buildQuestions(document.getElementById('vocabQuestions'), vocabData, (allCorrect) => {
+    const banner = document.getElementById('vocabStatus');
+    const nextBtn = document.getElementById('vocabNextBtn');
+    if(allCorrect){
+      banner.textContent = "🔓 The vault clicks open! All five words solved.";
+      banner.className = 'status-banner good show';
+      nextBtn.disabled = false;
+      state.rooms.vocab = true;
+    }
+  });
+  document.getElementById('vocabCheckBtn').addEventListener('click', () => {
+    const banner = document.getElementById('vocabStatus');
+    if(state.rooms.vocab){ return; }
+    banner.textContent = "Keep going — fix any red answers, then check again!";
+    banner.className = 'status-banner bad show';
+  });
+  document.getElementById('vocabNextBtn').addEventListener('click', () => {
+    showScreen('screen-reading', 'reading');
+  });
+
+  // ---------- ROOM 2: READING ----------
+  buildQuestions(document.getElementById('readingQuestions'), readingData, (allCorrect) => {
+    const banner = document.getElementById('readingStatus');
+    const nextBtn = document.getElementById('readingNextBtn');
+    if(allCorrect){
+      banner.textContent = "🔓 The library door swings open! Great reading.";
+      banner.className = 'status-banner good show';
+      nextBtn.disabled = false;
+      state.rooms.reading = true;
+    }
+  });
+  document.getElementById('readingCheckBtn').addEventListener('click', () => {
+    const banner = document.getElementById('readingStatus');
+    if(state.rooms.reading){ return; }
+    banner.textContent = "Almost there — look back at the story for red answers!";
+    banner.className = 'status-banner bad show';
+  });
+  document.getElementById('readingNextBtn').addEventListener('click', () => {
+    showScreen('screen-grammar', 'grammar');
+  });
+  document.getElementById('readAloudBtn').addEventListener('click', () => {
+    if(!('speechSynthesis' in window)){
+      alert("Sorry, this browser can't read aloud. Try reading it together instead!");
+      return;
+    }
+    const text = document.querySelector('#screen-reading .passage').innerText.replace('🔊 Read the story aloud','');
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.92;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  });
+
+  // ---------- ROOM 3: GRAMMAR ----------
+  buildQuestions(document.getElementById('grammarQuestions'), grammarData, (allCorrect) => {
+    const banner = document.getElementById('grammarStatus');
+    const nextBtn = document.getElementById('grammarNextBtn');
+    if(allCorrect){
+      banner.textContent = "🔓 The forge glows gold — every sentence fixed!";
+      banner.className = 'status-banner good show';
+      nextBtn.disabled = false;
+      state.rooms.grammar = true;
+    }
+  });
+  document.getElementById('grammarCheckBtn').addEventListener('click', () => {
+    const banner = document.getElementById('grammarStatus');
+    if(state.rooms.grammar){ return; }
+    banner.textContent = "So close — check the red sentences and try again!";
+    banner.className = 'status-banner bad show';
+  });
+  document.getElementById('grammarNextBtn').addEventListener('click', () => {
+    renderKeychain();
+    buildQuizIfNeeded();
+    showScreen('screen-quiz', 'quiz');
+  });
+
+  // ---------- KEYCHAIN ----------
+  function renderKeychain(){
+    const wrap = document.getElementById('keychainDisplay');
+    wrap.innerHTML = "";
+    const keys = [
+      { earned: state.rooms.vocab, icon:'🗝️' },
+      { earned: state.rooms.reading, icon:'🗝️' },
+      { earned: state.rooms.grammar, icon:'🗝️' }
+    ];
+    keys.forEach(k => {
+      const el = document.createElement('div');
+      el.className = 'key' + (k.earned ? ' earned' : '');
+      el.textContent = k.earned ? k.icon : '·';
+      wrap.appendChild(el);
+    });
+  }
+
+  // ---------- FINAL QUIZ ----------
+  let quizBuilt = false;
+  const quizSelections = new Array(quizData.length).fill(null);
+
+  function buildQuizIfNeeded(){
+    if(quizBuilt) return;
+    quizBuilt = true;
+    const container = document.getElementById('quizQuestions');
+    quizData.forEach((q, qi) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'question';
+      const p = document.createElement('div');
+      p.className = 'question-prompt';
+      p.textContent = (qi+1) + ". " + q.prompt;
+      wrap.appendChild(p);
+      const choicesWrap = document.createElement('div');
+      choicesWrap.className = 'choices';
+      q.choices.forEach((choiceText, ci) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'choice';
+        btn.innerHTML = '<span class="icon"></span><span>' + choiceText + '</span>';
+        btn.addEventListener('click', () => {
+          Array.from(choicesWrap.children).forEach(c => c.classList.remove('selected'));
+          btn.classList.add('selected');
+          quizSelections[qi] = ci;
+        });
+        choicesWrap.appendChild(btn);
+      });
+      wrap.appendChild(choicesWrap);
+      container.appendChild(wrap);
+    });
+  }
+
+  document.getElementById('quizSubmitBtn').addEventListener('click', () => {
+    const unanswered = quizSelections.filter(s => s === null).length;
+    if(unanswered > 0){
+      alert("Please answer all " + quizData.length + " questions before opening the chest! (" + unanswered + " left)");
+      return;
+    }
+    let score = 0;
+    quizData.forEach((q, qi) => { if(quizSelections[qi] === q.correct) score++; });
+    state.quizScore = score;
+    state.quizTotal = quizData.length;
+    showResults(score >= 6);
+  });
+
+  // ---------- RESULTS ----------
+  function showResults(passed){
+    const content = document.getElementById('resultsContent');
+    const name = state.playerName || "Reader";
+    if(passed){
+      content.innerHTML =
+        '<div style="text-align:center">' +
+          '<div style="font-size:3.2rem;margin-bottom:6px">🏆✨</div>' +
+          '<h2 class="room-title">You escaped with the Great Book of Tales!</h2>' +
+          '<p class="room-intro">You scored ' + state.quizScore + ' out of ' + state.quizTotal + '. The dragon is impressed!</p>' +
+          '<div class="certificate">' +
+            '<div style="font-size:1.8rem">📜</div>' +
+            '<h3>Certificate of Reading Bravery</h3>' +
+            '<div class="cert-name">' + escapeHtml(name) + '</div>' +
+            '<p>successfully escaped Story Tower<br>by mastering vocabulary, reading, and grammar!</p>' +
+          '</div>' +
+          '<div class="btn-row" style="justify-content:center">' +
+            '<button class="btn" id="printBtn">🖨️ Print Certificate</button>' +
+            '<button class="btn ghost" id="restartBtn">Play Again</button>' +
+          '</div>' +
+        '</div>';
+      launchConfetti();
+    } else {
+      content.innerHTML =
+        '<div style="text-align:center">' +
+          '<div style="font-size:3rem;margin-bottom:6px">🐉💤</div>' +
+          '<h2 class="room-title">So close! The dragon woke up.</h2>' +
+          '<p class="room-intro">You scored ' + state.quizScore + ' out of ' + state.quizTotal + '. You need 6 or more to escape. Take a breath and try the Final Quiz again!</p>' +
+          '<div class="btn-row" style="justify-content:center">' +
+            '<button class="btn" id="retryQuizBtn">Try the Quiz Again</button>' +
+          '</div>' +
+        '</div>';
+      document.getElementById('retryQuizBtn').addEventListener('click', () => {
+        quizSelections.fill(null);
+        document.querySelectorAll('#quizQuestions .choice').forEach(c => c.classList.remove('selected'));
+        showScreen('screen-quiz', 'quiz');
+      });
+    }
+    showScreen('screen-results', 'quiz');
+
+    if(passed){
+      document.getElementById('printBtn').addEventListener('click', () => window.print());
+      document.getElementById('restartBtn').addEventListener('click', () => window.location.reload());
+    }
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function launchConfetti(){
+    const colors = ['#f0a93a','#2e7d5b','#2c6e9b','#b5541b','#8e3b6b'];
+    for(let i=0;i<60;i++){
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random()*100 + 'vw';
+      piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+      piece.style.animationDuration = (2.5 + Math.random()*2) + 's';
+      piece.style.animationDelay = (Math.random()*0.6) + 's';
+      document.body.appendChild(piece);
+      setTimeout(() => piece.remove(), 5000);
+    }
+  }
+
+  // ---------- START ----------
+  document.getElementById('startBtn').addEventListener('click', () => {
+    state.playerName = document.getElementById('playerName').value.trim();
+    showScreen('screen-vocab', 'vocab');
+  });
+
+  // ---------- TEACHER PANEL ----------
+  document.getElementById('teacherToggle').addEventListener('click', () => {
+    document.getElementById('teacherPanel').classList.toggle('show');
+  });
+
+  renderTrail('start');
+})();
+</script>
+</body>
+</html>
